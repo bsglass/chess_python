@@ -32,10 +32,17 @@ def render_board_ascii(board:[[str]])->None:
 
 def turn_manager(board:[[str]])->None:
     """Manages turns"""
-    while True:
+    players=['White','Black']
+    move_no=0
+    while not (is_checkmate(board,'w') or is_checkmate(board,'b')):
+        player=players[move_no%2]
+
         render_board_ascii(board)
+        print(player+' to move.')
+        if is_check(board,player[0].lower()):
+            print('You are in check!')
         selected_origin=str(input('Select the square of the piece which you want to move (e.g d4)'))
-        if get_piece(board,selected_origin)=='':
+        if get_piece(board,selected_origin)=='' or get_piece(board,selected_origin)[0]!=player[0].lower():
             print('Selected square is not valid, try again')
             continue
 
@@ -50,6 +57,11 @@ def turn_manager(board:[[str]])->None:
             continue
         
         board=make_move(board,selected_origin,selected_destination)
+
+        move_no+=1
+
+    winner='White' if is_checkmate(board,'b') else 'Black'
+    print(winner+' wins!')
 
 def get_piece(board:[[str]],square:str)->str:
     """Returns the piece on the selected square."""
@@ -76,6 +88,10 @@ def legal_destinations(board:[[str]],origin:str,piece_type:str)->[str]:
         candidate_square=current_file+str(current_rank+forward)
         if get_piece(board,candidate_square)=='':
             destinations.append(candidate_square)
+            if (current_rank==2 and piece_type[0]=='w') or (current_rank==7 and piece_type[0]=='b'):
+                candidate_square=current_file+str(current_rank+forward*2)
+                if get_piece(board,candidate_square)=='':
+                    destinations.append(candidate_square)
         candidate_square=[chr(ord(current_file)-1)+str(current_rank+forward),chr(ord(current_file)+1)+str(current_rank+forward)]
         destinations.extend([square for square in candidate_square if get_piece(board,square)!='' if get_piece(board,square)[0]==opponent_colour])
 
@@ -108,6 +124,30 @@ def make_move(board:[[str]],origin:str,des:str)->[[str]]:
     board[8-int(des[1])][file_list.index(des[0])]=get_piece(board,origin)
     board[8-int(origin[1])][file_list.index(origin[0])]=''
     return board
+
+def find_piece(board:[[str]],piece_type:str)->[str]:
+    """Returns a list of the squares which have a specified piece on."""
+    valid_squares=[]
+    for row in range(1,9):
+        for file in file_list:
+            if get_piece(board,file+str(row))==piece_type:
+                valid_squares.append(file+str(row))
+    return valid_squares
+
+def is_check(board:[[str]],colour:str)->bool:
+    """Returns True if the selected colour ('w' or 'b') is in check, else False"""
+    opponent_colour='w' if colour=='b' else 'b'
+    king_square=find_piece(board,colour+'k')[0]
+
+    for piece in ['p','r','n','b','q','k']:
+        for square in legal_destinations(board,king_square,colour+piece):
+            if get_piece(board,square)==opponent_colour+piece:
+                return True
+    return False
+
+def is_checkmate(board:[[str]],colour:str)->bool:
+    """Returns True if the selected colour ('w' or 'b') is in checkmate, else False"""
+    return False
 
 if __name__=="__main__":
     board=[['br','bn','bb','bq','bk','bb','bn','br'],['bp']*8,['']*8,['']*8,['']*8,['']*8,['wp']*8,['wr','wn','wb','wq','wk','wb','wn','wr']]
