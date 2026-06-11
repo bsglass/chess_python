@@ -47,12 +47,12 @@ def turn_manager(board:[[str]])->None:
             continue
 
         available_moves=legal_destinations(board,selected_origin,get_piece(board,selected_origin))
-        if len(available_moves)==0:
+        if len(available_moves['moves']+available_moves['takes'])==0:
             print('Piece on selected square has no available moves, try again')
             continue
 
-        selected_destination=str(input('Select which destination out of these choices: '+', '.join(available_moves)))
-        if selected_destination not in available_moves:
+        selected_destination=input(f'Select which destination out of these choices:\nMoves: {', '.join(available_moves['moves'])}\nTakes: {', '.join(available_moves['takes'])}')
+        if selected_destination not in available_moves['moves']+available_moves['takes']:
             print('Selected square is not valid, try again')
             continue
         
@@ -69,7 +69,7 @@ def get_piece(board:[[str]],square:str)->str:
         return '-1' #indicates that the square is not on the board
     return board[8-int(square[1])][file_list.index(square[0])]
 
-def legal_destinations(board:[[str]],origin:str,piece_type:str)->[str]:
+def legal_destinations(board:[[str]],origin:str,piece_type:str)->{str:[str]}:
     """Returns the legal destinations for a given piece_type on a certain square in the current board
     Open ended, to allow this to be used for checkmate code."""
     moves_dict={
@@ -79,7 +79,10 @@ def legal_destinations(board:[[str]],origin:str,piece_type:str)->[str]:
         'q':[(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,-1),(-1,1)],
         'k':[(0,1),(1,0),(0,-1),(-1,0),(1,1),(1,-1),(-1,-1),(-1,1)]
     }
-    destinations=[]
+    destinations={
+        'moves':[],
+        'takes':[]
+    }
     current_file,current_rank=origin[0],int(origin[1])
     opponent_colour='w' if piece_type[0]=='b' else 'b'
 
@@ -87,13 +90,13 @@ def legal_destinations(board:[[str]],origin:str,piece_type:str)->[str]:
         forward=1 if piece_type[0]=='w' else -1
         candidate_square=current_file+str(current_rank+forward)
         if get_piece(board,candidate_square)=='':
-            destinations.append(candidate_square)
+            destinations['moves'].append(candidate_square)
             if (current_rank==2 and piece_type[0]=='w') or (current_rank==7 and piece_type[0]=='b'):
                 candidate_square=current_file+str(current_rank+forward*2)
                 if get_piece(board,candidate_square)=='':
-                    destinations.append(candidate_square)
+                    destinations['moves'].append(candidate_square)
         candidate_square=[chr(ord(current_file)-1)+str(current_rank+forward),chr(ord(current_file)+1)+str(current_rank+forward)]
-        destinations.extend([square for square in candidate_square if get_piece(board,square)!='' if get_piece(board,square)[0]==opponent_colour])
+        destinations['takes'].extend([square for square in candidate_square if get_piece(board,square)!='' if get_piece(board,square)[0]==opponent_colour])
 
     if piece_type[1] in ['r','b','q']:
         move_vectors=moves_dict[piece_type[1]]
@@ -104,18 +107,20 @@ def legal_destinations(board:[[str]],origin:str,piece_type:str)->[str]:
                 i+=1
                 candidate_square=chr(ord(current_file)+x*i)+str(current_rank+y*i)
                 if get_piece(board,candidate_square)=='':
-                    destinations.append(candidate_square)
+                    destinations['moves'].append(candidate_square)
                     continue
                 if get_piece(board,candidate_square)[0]==opponent_colour:
-                    destinations.append(candidate_square)
+                    destinations['takes'].append(candidate_square)
                 looping=False
 
     if piece_type[1] in ['n','k']:
         move_vectors=moves_dict[piece_type[1]]
         for x,y in move_vectors:
             candidate_square=chr(ord(current_file)+x)+str(current_rank+y)
-            if get_piece(board,candidate_square)=='' or get_piece(board,candidate_square)[0]==opponent_colour:
-                destinations.append(candidate_square)
+            if get_piece(board,candidate_square)=='':
+                destinations['moves'].append(candidate_square)
+            elif get_piece(board,candidate_square)[0]==opponent_colour:
+                destinations['takes'].append(candidate_square)
 
     return destinations
 
@@ -140,7 +145,7 @@ def is_check(board:[[str]],colour:str)->bool:
     king_square=find_piece(board,colour+'k')[0]
 
     for piece in ['p','r','n','b','q','k']:
-        for square in legal_destinations(board,king_square,colour+piece):
+        for square in legal_destinations(board,king_square,colour+piece)['takes']:
             if get_piece(board,square)==opponent_colour+piece:
                 return True
     return False
