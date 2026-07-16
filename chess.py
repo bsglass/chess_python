@@ -122,15 +122,10 @@ def legal_destinations(origin:str,piece_type:str,board=board)->{str:[str]}:
                 destinations['moves'].append(candidate_square)
             elif get_piece(candidate_square)[0]==opponent_colour:
                 destinations['takes'].append(candidate_square)
-
-    # all_moves=[x for xs in destinations.values() for x in xs]
-    # print(all_moves)
-    # if len(all_moves):
-    #     destinations=[x for x in all_moves if not is_check(piece_type[0],make_move(origin,x,board))]
         
     return destinations
 
-def make_move(origin:str,des:str,board=board):
+def make_move(origin:str,des:str):
     """Moves something from origin to destination on the board"""
     board[8-int(des[1])][file_list.index(des[0])]=get_piece(origin)
     board[8-int(origin[1])][file_list.index(origin[0])]=''
@@ -144,26 +139,18 @@ def find_piece(piece_type:str)->[str]:
                 valid_squares.append(file+str(row))
     return valid_squares
 
-def is_check(colour:str,board=board)->bool:
+def is_check(colour:str)->bool:
     """Returns True if the selected colour ('w' or 'b') is in check, else False"""
-    opponent_colour='w' if colour=='b' else 'b'
     king_square=find_piece(colour+'k')[0]
-
-    for piece in ['p','r','n','b','q','k']:
-        for square in legal_destinations(king_square,colour+piece)['takes']:
-            if get_piece(square)==opponent_colour+piece:
-                return True
+    opponent_colour='w' if colour=='b' else 'b'
+    for piece_type in ['p','r','n','b','q','k']:
+        if opponent_colour+piece_type in [get_piece(x) for x in legal_destinations(king_square,colour+piece_type)['takes']]:
+            return True
     return False
 
 def is_checkmate(colour:str)->bool:
     """Returns True if the selected colour ('w' or 'b') is in checkmate, else False"""
-    if not is_check(colour):
-        return False
-    for piece in ['p','r','n','b','q','k']:
-        if len([x for xs in legal_destinations(find_piece(colour+'k')[0],colour+piece,board).values() for x in xs]):
-            return False
-    print('CHECKMATE')
-    return True
+    return False
 
 def is_stalemate(colour:str)->bool:
     """Returns True if the selected colour ('w' or 'b') is in stalemate, else False"""
