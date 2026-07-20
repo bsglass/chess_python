@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 #Mappings for unicode piece symbols for more easily understood ones, for use in code.
 piece_dict={
     'wk':'\u2654',
@@ -16,14 +18,14 @@ piece_dict={
 }
 
 file_list=['a','b','c','d','e','f','g','h']
-board=[['br','bn','bb','bq','bk','bb','bn','br'],['bp']*8,['']*8,['']*8,['']*8,['']*8,['wp']*8,['wr','wn','wb','wq','wk','wb','wn','wr']]
+global_board=[['br','bn','bb','bq','bk','bb','bn','br'],['bp']*8,['']*8,['']*8,['']*8,['']*8,['wp']*8,['wr','wn','wb','wq','wk','wb','wn','wr']]
 
-def render_board_ascii()->None:
+def render_board_ascii(board=global_board)->None:
     """Renders the board using ascii characters"""
     horizontal_line='--------------------------'
     rank=8
     print(horizontal_line)
-    for row in board:
+    for row in global_board:
         generated_row=str(rank)+'|'
         generated_row+=(' |'.join([piece_dict[square] for square in row])+' |')
         print(generated_row)
@@ -57,20 +59,21 @@ def turn_manager()->None:
             print('Selected square is not valid, try again')
             continue
         
-        board=make_move(selected_origin,selected_destination)
+        global_board=make_move(selected_origin,selected_destination)
 
         move_no+=1
 
     winner='White' if is_checkmate('b') else 'Black'
+    render_board_ascii()
     print(winner+' wins!')
 
-def get_piece(square:str)->str:
+def get_piece(square:str,board=global_board)->str:
     """Returns the piece on the selected square."""
     if square[0] not in file_list or int(square[1:]) not in range(1,9):
         return '-1' #indicates that the square is not on the board
     return board[8-int(square[1])][file_list.index(square[0])]
 
-def legal_destinations(origin:str,piece_type:str,board=board)->{str:[str]}:
+def legal_destinations(origin:str,piece_type:str,board=global_board)->{str:[str]}:
     """Returns the legal destinations for a given piece_type on a certain square in the current board
     Open ended, to allow this to be used for checkmate code."""
     moves_dict={
@@ -125,7 +128,23 @@ def legal_destinations(origin:str,piece_type:str,board=board)->{str:[str]}:
         
     return destinations
 
-def make_move(origin:str,des:str):
+def legal_destinations_check(origin:str,piece_type:str,board=global_board)->{str:[str]}:
+    """Version of legal_destinations() which makes sure the move doesn't leave you in check.
+    Two versions needed because this calls is_check(), and is_check() calls legal_destinations() (inf recursion)."""
+    destinations=legal_destinations(origin,piece_type,board)
+    for des_type in destinations.keys():
+        temp_list=[]
+        for des in destinations[des_type]:
+            temp_board=deepcopy(board)
+            if not is_check(piece_type[0],make_move(origin,des,temp_board)):
+                temp_list.append(des)
+            render_board_ascii(temp_board)
+        # destinations[des_type]=[des for des in destinations[des_type] if not is_check(piece_type[0],make_move_temp(origin,des,temp_board))]
+        destinations[des_type]=temp_list
+    return(destinations)
+
+
+def make_move(origin:str,des:str,board=global_board):
     """Moves something from origin to destination on the board"""
     board[8-int(des[1])][file_list.index(des[0])]=get_piece(origin)
     board[8-int(origin[1])][file_list.index(origin[0])]=''
@@ -139,7 +158,7 @@ def find_piece(piece_type:str)->[str]:
                 valid_squares.append(file+str(row))
     return valid_squares
 
-def is_check(colour:str)->bool:
+def is_check(colour:str,board=global_board)->bool:
     """Returns True if the selected colour ('w' or 'b') is in check, else False"""
     king_square=find_piece(colour+'k')[0]
     opponent_colour='w' if colour=='b' else 'b'
@@ -150,12 +169,19 @@ def is_check(colour:str)->bool:
 
 def is_checkmate(colour:str)->bool:
     """Returns True if the selected colour ('w' or 'b') is in checkmate, else False"""
-    return False
+    if not is_check(colour):
+        return False
+    for piece_type in ['p','r','n','b','q','k']:
+        for piece_square in find_piece(colour+piece_type):
+            print([x for xs in legal_destinations_check(piece_square,colour+piece_type).values() for x in xs],piece_square)
+            if len([x for xs in legal_destinations_check(piece_square,colour+piece_type).values() for x in xs]):
+                return False
+    return True
 
 def is_stalemate(colour:str)->bool:
     """Returns True if the selected colour ('w' or 'b') is in stalemate, else False"""
     return False
 
 if __name__=="__main__":
-    board=[['br','bn','bb','bq','bk','bb','bn','br'],['bp']*8,['']*8,['']*8,['']*8,['']*8,['wp']*8,['wr','wn','wb','wq','wk','wb','wn','wr']]
+    #board=[['br','bn','bb','bq','bk','bb','bn','br'],['bp']*8,['']*8,['']*8,['']*8,['']*8,['wp']*8,['wr','wn','wb','wq','wk','wb','wn','wr']]
     turn_manager()
